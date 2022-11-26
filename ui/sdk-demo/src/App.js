@@ -15,73 +15,81 @@ function App() {
   // const [accounts, setAccounts] = useState<[] | null>(null);
   const [socialLogin, setSocialLogin] = useState(false);
   const [smartAccountAddress, setSmartAccountAddress] = useState("");
-  const [userBalance, setUserBalance] = useState({symbol: "USDC", amount: 0});
-  const [dappBalance, setDappBalance] = useState({symbol: "USDC", amount: 0});
+  const [userBalance, setUserBalance] = useState({symbol: "USDT", amount: 0});
+  const [dappBalance, setDappBalance] = useState({symbol: "USDT", amount: 0});
   const tokenAddress = "0xeaBc4b91d9375796AA4F69cC764A4aB509080A58";
 
-  useEffect(()=>{
-    let initWallet = async () => {
-      if(socialLogin) {
-        setIsLogin(true);
-        socialLogin.getUserInfo().then((user) => {
-          console.log('user', user);
-          // setSmartAccountAddress(user);
-        });
-    
-        const newProvider = new ethers.providers.Web3Provider(
-          socialLogin.provider,
-        );
-    
-        const erc20Contract = new ethers.Contract(tokenAddress, erc20ABI, newProvider);
-    
-        let smartAccount;
-        await newProvider.listAccounts().then(async(accounts) => {
-          console.log(accounts)
-          smartAccount = accounts;
-          setSmartAccountAddress(accounts)
-        });
-    
-        console.log(smartAccount[0]);
-    
-          const smartContractBalance = await erc20Contract.balanceOf(smartAccount[0]);
-          const smartContractSymbol = await erc20Contract.symbol();
-    
-          setUserBalance({amount: smartContractBalance.toString(), symbol:smartContractSymbol});
-    
-        // console.log(smartAccountAddress);
-      
-        socialLogin.hideWallet();
-      }
+  let initWallet = async () => {
+    console.log("init wallet");
+    const socialLogin = new SocialLogin();
+    await socialLogin.init(ethers.utils.hexValue(80001), {
+      "http://localhost:3000":
+        "MEUCIQDCrwqCFSAoivC8NfJdHv9WneLfdMADQCUitF6zs2QCagIgOdh3_6dZ81Le1PFzNfDLSImuugEb46Tz64SjOcQWcZA",
+    });
+    socialLogin.showConnectModal();
+    setSocialLogin(socialLogin);
+    console.log(socialLogin)
+    if(socialLogin.provider) {
+      setIsLogin(true);
+      getTokenBalances();
     }
+    return socialLogin;
+  }
+
+  useEffect(()=>{
     initWallet();
+  },[]);
+
+  useEffect(()=>{
+    if(socialLogin) {
+      getTokenBalances();
+    }
   },[socialLogin]);
+
+  async function getTokenBalances() {
+    if(socialLogin?.provider) {
+
+      const newProvider = new ethers.providers.Web3Provider(
+        socialLogin.provider,
+      );
+  
+      const erc20Contract = new ethers.Contract(tokenAddress, erc20ABI, newProvider);
+  
+      let smartAccount;
+      await newProvider.listAccounts().then(async(accounts) => {
+        console.log(accounts)
+        smartAccount = accounts;
+        setSmartAccountAddress(accounts)
+      });
+  
+      console.log(smartAccount[0]);
+  
+      const smartContractBalance = await erc20Contract.balanceOf(smartAccount[0]);
+      const smartContractSymbol = await erc20Contract.symbol();
+  
+      setUserBalance({amount: smartContractBalance.toString(), symbol:smartContractSymbol});
+    } else {
+      console.log("Social login is not defined")
+    }
+  }
 
   async function logout() {
     if(socialLogin) {
       await socialLogin.logout();
       socialLogin.hideWallet();
       setIsLogin(false);
+      setSocialLogin(null);
     }
   }
 
   async function login() {
     try {
-      if(!socialLogin) {
-        const socialLogin = new SocialLogin();
-        await socialLogin.init(ethers.utils.hexValue(80001), {
-          "http://localhost:3000":
-            "MEUCIQDCrwqCFSAoivC8NfJdHv9WneLfdMADQCUitF6zs2QCagIgOdh3_6dZ81Le1PFzNfDLSImuugEb46Tz64SjOcQWcZA",
-        });
-
-        if(socialLogin.provider) {
-          setIsLogin(true);
-          setSocialLogin(socialLogin);
-        } else {
-          socialLogin.showConnectModal();
-          socialLogin.showWallet();
-          setSocialLogin(socialLogin);
-        }
-        
+      if(socialLogin) {
+        socialLogin.showWallet();
+      } else {
+        let socialLogin = await initWallet();
+        socialLogin.showWallet();
+        console.log("Social login is not defined");
       }
     } catch (error){
       console.log(error);
