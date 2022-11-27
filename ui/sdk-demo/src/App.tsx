@@ -5,17 +5,20 @@ import {
 } from "@biconomy/core-types";
 import { ethers } from "ethers";
 import SocialLogin from "@biconomy/web3-auth";
-import erc20ABI from './abis/erc20.abi.json';
-import fundMeABI from './abis/fundMe.abi.json';
+const erc20ABI = require('./abis/erc20.abi.json');
+const fundMeABI = require('./abis/fundMe.abi.json');
 
-const SmartAccount = require("@biconomy/smart-account").default; 
+// const SmartAccount = require("@biconomy/smart-account").default; 
 
 function App() {
 
   const [isLogin, setIsLogin] = useState(false);
-  // const [accounts, setAccounts] = useState<[] | null>(null);
-  const [socialLogin, setSocialLogin] = useState(false);
-  const [smartAccountAddress, setSmartAccountAddress] = useState("");
+  const [smartAccountAddress, setSmartAccountAddress] = useState<string[] | null>(null);
+  // const [socialLogin, setSocialLogin] = useState(false);
+  const [socialLogin, setSocialLogin] = useState<SocialLogin | null>(
+    null,
+  );
+  // const [smartAccountAddress, setSmartAccountAddress] = useState("");
   const [userBalance, setUserBalance] = useState({symbol: "USDT", amount: 0});
   const [dappBalance, setDappBalance] = useState({symbol: "USDT", amount: 0});
   const tokenAddress = "0xeaBc4b91d9375796AA4F69cC764A4aB509080A58";
@@ -65,9 +68,11 @@ function App() {
       ]
     }
 
-    const newProvider = new ethers.providers.Web3Provider(
-      socialLogin.provider,
-    );
+    if(socialLogin?.provider){
+      const newProvider = new ethers.providers.Web3Provider(
+        socialLogin.provider,
+      );
+    }
 
     // let smartAccount = new SmartAccount(newProvider, options);
     // smartAccount = await smartAccount.init();
@@ -89,16 +94,16 @@ function App() {
       await newProvider.listAccounts().then(async(accounts) => {
         console.log(accounts)
         smartAccount = accounts;
-        setSmartAccountAddress(accounts)
+        setSmartAccountAddress(accounts.map(a => a.toLowerCase()))
       });
   
-      console.log(smartAccount[0]);
+      // console.log(smartAccount[0]);
   
-      const smartContractBalance = await erc20Contract.balanceOf(smartAccount[0]);
+      const smartContractBalance = await erc20Contract.balanceOf(smartAccountAddress);
       const smartContractSymbol = await erc20Contract.symbol();
   
 
-      const dappBalance = await dappContract.balanceOf(smartAccount[0], tokenAddress);
+      const dappBalance = await dappContract.balanceOf(smartAccountAddress, tokenAddress);
   
       console.log("dappBalance.toString()");
       console.log(dappBalance.toString());
