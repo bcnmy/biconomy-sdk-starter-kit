@@ -84,18 +84,12 @@ export const SmartAccountProvider = ({ children }: any) => {
       console.log("walletProvider", walletProvider);
       // New instance, all config params are optional
       const wallet = new SmartAccount(walletProvider, {
-        // signType: SignTypeMethod.PERSONAL_SIGN,
         activeNetworkId: activeChainId,
         supportedNetworksIds: supportedChains,
-        // backendUrl: 'https://sdk-backend.staging.biconomy.io/v1',
-        // socketServerUrl: 'wss://sdk-testing-ws.staging.biconomy.io/connection/websocket',
-        // relayerUrl: 'https://sdk-relayer.staging.biconomy.io/api/v1/relay',
-        // bundlerUrl: 'http://localhost:3005/rpc',
         networkConfig: [
           {
             chainId: ChainId.POLYGON_MUMBAI,
             dappAPIKey: "59fRCMXvk.8a1652f0-b522-4ea7-b296-98628499aee3",
-            // if need to override // providerUrl:
           },
           {
             chainId: ChainId.POLYGON_MAINNET,
@@ -115,7 +109,6 @@ export const SmartAccountProvider = ({ children }: any) => {
           "txHashGenerated event received in AddLP via emitter",
           response
         );
-        // showSuccessMessage(`Transaction sent: ${response.hash}`, response.hash);
       });
 
       smartAccount.on("txHashChanged", (response: any) => {
@@ -123,18 +116,10 @@ export const SmartAccountProvider = ({ children }: any) => {
           "txHashChanged event received in AddLP via emitter",
           response
         );
-        // showSuccessMessage(
-        //   `Transaction updated with hash: ${response.hash}`,
-        //   response.hash
-        // );
       });
 
       smartAccount.on("txMined", (response: any) => {
         console.log("txMined event received in AddLP via emitter", response);
-        // showSuccessMessage(
-        //   `Transaction confirmed: ${response.hash}`,
-        //   response.hash
-        // );
       });
 
       smartAccount.on("error", (response: any) => {

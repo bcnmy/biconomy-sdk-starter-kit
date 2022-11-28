@@ -14,8 +14,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
-    "tls": "^0.0.1",
-    "typescript": "^4.1.2"
+    "tls": "^0.0.1"
   },
   "scripts": {
     "start": "react-app-rewired start",
@@ -46,10 +45,8 @@
   "devDependencies": {
     "assert": "^2.0.0",
     "browserify-zlib": "^0.2.0",
-    "crypto-browserify": "^3.12.0",
     "https-browserify": "^1.0.0",
     "os-browserify": "^0.3.0",
-    "path-browserify": "^1.0.1",
     "process": "^0.11.10",
     "react-app-rewired": "^2.2.1",
     "stream-browserify": "^3.0.0",
