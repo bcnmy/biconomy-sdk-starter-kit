@@ -29,8 +29,8 @@ function App() {
     setSocialLogin(socialLogin);
     console.log(socialLogin)
     if (socialLogin.provider) {
-      setIsLogin(true);
       getTokenBalances();
+      setIsLogin(true);
     }
     return socialLogin;
   }
