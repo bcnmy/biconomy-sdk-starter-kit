@@ -33,7 +33,7 @@ function App() {
     async function  initWallet() {
         // init wallet
         const socialLogin = new SocialLogin();
-        await socialLogin.init('0x5'); // Enter the network id in hex) parameter
+        await socialLogin.init(ethers.utils.hexValue(80001)); // Enter the network id in hex) parameter
         socialLogin.showConnectModal();
 
         setSocialLogin(socialLogin);
