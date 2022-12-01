@@ -7,8 +7,10 @@ import { ethers } from "ethers";
 import SocialLogin from "@biconomy/web3-auth";
 import erc20ABI from './abis/erc20.abi.json';
 import fundMeABI from './abis/fundMe.abi.json';
+import stateChangeABI from './abis/statechange.abi.json';
 import SmartAccount from "@biconomy/smart-account";
 import { toFixed } from './utils';
+import { activeChainId } from './utils/chainConfig';
 
 type Balance = {
   symbol: string,
@@ -20,138 +22,141 @@ function App() {
   const [socialLogin, setSocialLogin] = useState<SocialLogin | null>();
   const [smartAccount, setSmartAccount] = useState<SmartAccount>();
   const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>();
-  const [userBalance, setUserBalance] = useState<Balance>({ symbol: "USDC", amount: "0" });
-  const [dappBalance, setDappBalance] = useState<Balance>({ symbol: "USDC", amount: "0" });
-  const tokenAddress = "0xdA5289fCAAF71d52a80A254da614a192b693e977";
+  const tokenAddress = "0xeaBc4b91d9375796AA4F69cC764A4aB509080A58";
   const dappContractAddress = "0x682b1f3d1afa69ddfa5ff62c284894a19fd395b4";
-  const activeChainId = ChainId.POLYGON_MUMBAI;
+  const stateChangeContractAddress = "0xCeF6D6781f7db1BCDF18C6123A757a9a6398eA79";
+  const amount = "2000000000000000000";
 
-  let initWallet = async () => {
-    console.log("init wallet");
-    const socialLogin = new SocialLogin();
-    await socialLogin.init(ethers.utils.hexValue(activeChainId));
-    socialLogin.showConnectModal();
-    setSocialLogin(socialLogin);
-    console.log(socialLogin)
-    if (socialLogin.provider) {
-      setIsLogin(true);
+//   const activeChainId = ChainId.POLYGON_MUMBAI;
+
+
+    async function  initWallet() {
+        // init wallet
+        const socialLogin = new SocialLogin();
+        await socialLogin.init('0x5'); // Enter the network id in hex) parameter
+        socialLogin.showConnectModal();
+
+        setSocialLogin(socialLogin);
+        return socialLogin;
     }
-    return socialLogin;
-  }
 
-  useEffect(() => {
-    initWallet();
-  }, []);
+    async function login() {
+        try {
+            
+              let socialLogin = await initWallet();
 
-  useEffect(() => {
-    const initSmartAccount = async () => {
-      if (socialLogin) {
-        let smartAccount = await initializeSmartAccount();
-        if(smartAccount) {
-          setSmartAccount(smartAccount);
-        }
-      }
-    }
-    initSmartAccount();
-  }, [socialLogin]);
+              if(!socialLogin.provider){
+                  socialLogin.showWallet();
+              } else {
+                setIsLogin(true);
+                const provider = new ethers.providers.Web3Provider(
+                    socialLogin.provider,
+                 );
+                const accounts = await provider.listAccounts();
+                console.log("EOA address", accounts);
 
-  useEffect(()=>{
-    const getSmartAccountAddress = async () => {
-      if(smartAccount) {
-        let smartAccountState = await smartAccount.getSmartAccountState();
-        let scwAddress = smartAccountState.address;
-        setSmartAccountAddress(scwAddress);
-        getTokenBalances(scwAddress);
-      }
-    }
-    getSmartAccountAddress();
-  }, [smartAccount])
 
-  async function initializeSmartAccount() {
-    if(socialLogin?.provider) {
+                let options = {
+                    activeNetworkId: activeChainId,
+                    supportedNetworksIds: [ activeChainId
+                    ],
+                    networkConfig: [
+                             {
+                             chainId: ChainId.POLYGON_MUMBAI,
+                             // Optional dappAPIKey (only required if you're using Gasless)
+                             dappAPIKey: '59fRCMXvk.8a1652f0-b522-4ea7-b296-98628499aee3',
+                             // if need to override Rpc you can add providerUrl: 
+                           },
+                         ]
+                   }
+                     
+                   const walletProvider = new ethers.providers.Web3Provider(socialLogin.provider);
 
-      let options = {
-        activeNetworkId: activeChainId,
-        supportedNetworksIds: [activeChainId],
-        // Network Config. 
-        // Link Paymaster / DappAPIKey for the chains you'd want to support Gasless transactions on
-        networkConfig: [
-          {
-            chainId: activeChainId,
-            dappAPIKey: "59fRCMXvk.8a1652f0-b522-4ea7-b296-98628499aee3", // Get one from Paymaster Dashboard
-            // customPaymasterAPI: <IPaymaster Instance of your own Paymaster>
+                   let smartAccount = new SmartAccount(walletProvider, options);
+                   smartAccount = await smartAccount.init();
+
+
+                  let smartAccountInfo = await smartAccount.getSmartAccountState();
+
+                  setSmartAccountAddress(smartAccountInfo?.address);
+
+
+                  smartAccount.on('txHashGenerated', (response: any) => {
+                    console.log('txHashGenerated event received via emitter', response);
+                    // showSuccessMessage(`Transaction sent: ${response.hash}`);
+                  });
+            
+                  smartAccount.on('txMined', (response: any) => {
+                    console.log('txMined event received via emitter', response);
+                    // showSuccessMessage(`Transaction mined: ${response.hash}`);
+                  });
+            
+                  smartAccount.on('error', (response: any) => {
+                    console.log('error event received via emitter', response);
+                  });
+
+
+                  const erc20Interface = new ethers.utils.Interface(erc20ABI);
+                  const dappInterface = new ethers.utils.Interface(fundMeABI);
+                  const stateChangeInterface = new ethers.utils.Interface(stateChangeABI);
+
+                  const txs = [];
+
+                  const data1 = erc20Interface.encodeFunctionData(
+                      'approve', [dappContractAddress, amount]
+                  )
+
+                  const tx1 = {
+                    to: tokenAddress ,
+                    data: data1
+                  }
+
+                  txs.push(tx1);
+                  const data2 = dappInterface.encodeFunctionData(
+                      'pullTokens', [tokenAddress, amount]
+                  )
+
+
+                  const tx2 = {
+                    to: dappContractAddress ,
+                    data: data2
+                  }
+
+                  txs.push(tx2);
+
+                const data3 = stateChangeInterface.encodeFunctionData(
+                'setValue', ["Hey People, its me Divya"]
+                )
+
+
+                const tx3 = {
+                to: stateChangeContractAddress ,
+                data: data3
+                }
+
+                txs.push(tx3);
+
+                const response = await smartAccount.sendGaslessTransactionBatch({ transactions: txs })
+
+                console.log(response);
+
+
+              }
+              console.log("Social login is not defined");
+
+            
+          } catch (error) {
+            console.log(error);
           }
-        ]
-      }
-  
-      const newProvider = new ethers.providers.Web3Provider(
-        socialLogin.provider,
-      );
-  
-      let smartAccount = new SmartAccount(newProvider, options);
-      smartAccount = await smartAccount.init();
-      console.log("smartAccount");
-      console.log(smartAccount);
-      return smartAccount;
     }
-    return;
-  }
 
-  async function getTokenBalances(smartAccountAddress: string) {
-    if (socialLogin?.provider) {
-      const newProvider = new ethers.providers.Web3Provider(
-        socialLogin.provider,
-      );
-
-      const erc20Contract = new ethers.Contract(tokenAddress, erc20ABI, newProvider);
-      const dappContract = new ethers.Contract(dappContractAddress, fundMeABI, newProvider);
-
-      const smartContractSymbol = await erc20Contract.symbol();
-      const decimal = await erc20Contract.decimals();      
-      const rawSCWBalance: ethers.BigNumber = await erc20Contract.balanceOf(smartAccountAddress);      
-      const scwBalance = toFixed(rawSCWBalance.toNumber() / Math.pow(10, decimal), 2);      
-      const dappRawBalance = await dappContract.balanceOf(smartAccountAddress, tokenAddress);
-      const dappBalance = toFixed(dappRawBalance.toNumber() / Math.pow(10, decimal), 2);
-      
-      if(scwBalance) {
-        setUserBalance({ amount: scwBalance.toString(), symbol: smartContractSymbol });
-      }
-      if(dappBalance) {
-        setDappBalance({ amount: dappBalance.toString(), symbol: smartContractSymbol });
-      }
-
-    } else {
-      console.log("Social login is not defined")
-    }
-  }
-
-  async function logout() {
-    if (socialLogin) {
-      await socialLogin.logout();
-      socialLogin.hideWallet();
-      setIsLogin(false);
-      setSocialLogin(null);
-    }
-  }
-
-  async function sendGaslessTransaction() {
-    console.log("yo");
+    async function sendGaslessTransaction() {
     
-  }
-
-  async function login() {
-    try {
-      if (socialLogin) {
-        socialLogin.showWallet();
-      } else {
-        let socialLogin = await initWallet();
-        socialLogin.showWallet();
-        console.log("Social login is not defined");
-      }
-    } catch (error) {
-      console.log(error);
     }
-  }
+
+    async function logout() {
+        
+    }
 
   return (
     <div className="App">
@@ -167,43 +172,6 @@ function App() {
           <div className='column meta-info-container'>
             <div className='row address-container'>
               Smart Account: {smartAccountAddress}
-            </div>
-            <div className='row balance-container'>
-              <div className='scw-balance'>
-                User Balance: {userBalance.amount} {userBalance.symbol}
-              </div>
-              <div className='dapp-balance'>
-                Dapp Balance: {dappBalance.amount} {dappBalance.symbol}
-              </div>
-            </div>
-          </div>
-          <div className='row action-container'>
-            <div className='column action-container'>
-              <h3>Action</h3>
-              <div className='column'>
-                <div className='gasless-action'>
-                  <div className='block-heading'>Gasless Transactions</div>
-                  <div>
-                    <button className='action-button' onClick={sendGaslessTransaction} >Send Transaction</button>
-                  </div>
-                </div>
-                <div className='user-paid-action'>
-                  <div className='block-heading'>User Paid Transactions</div>
-                  <div>
-                    <button className='action-button'>Estimate Gas</button>
-                    <button className='action-button'>Send Transaction</button>
-                  </div>
-                  <div>
-
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className='column transaction-container'>
-              <h3>Transactions</h3>
-              <div className='transactions-body'>
-
-              </div>
             </div>
           </div>
         </div>
