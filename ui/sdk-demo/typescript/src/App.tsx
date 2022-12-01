@@ -8,6 +8,7 @@ import SocialLogin from "@biconomy/web3-auth";
 import erc20ABI from './abis/erc20.abi.json';
 import fundMeABI from './abis/fundMe.abi.json';
 import stateChangeABI from './abis/statechange.abi.json';
+import setPurposeAbi from './abis/setPurpose.abi.json';
 import SmartAccount from "@biconomy/smart-account";
 import { toFixed } from './utils';
 import { activeChainId } from './utils/chainConfig';
@@ -19,57 +20,61 @@ type Balance = {
 
 function App() {
   const [isLogin, setIsLogin] = useState(false);
-  const [socialLogin, setSocialLogin] = useState<SocialLogin | null>();
-  const [smartAccount, setSmartAccount] = useState<SmartAccount>();
-  const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>();
-  const [smartAccountBalances, setSmartAccountBalances] = useState<string | null>();
-  const [balance, setBalance] = useState<Balance>({
+  // const [socialLogin, setSocialLogin] = useState<SocialLogin | null>();
+  // const [smartAccount, setSmartAccount] = useState<SmartAccount>();
+  // const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>();
+  const [eoaAddress, setEoaAddress] = useState<string | null>();
+  const [purpose, setPurpose] = useState<string | null>();
+  // const [smartAccountBalances, setSmartAccountBalances] = useState<string | null>();
+  /*const [balance, setBalance] = useState<Balance>({
     totalBalanceInUsd: 0,
     alltokenBalances: [],
-  });
+  });*/
   // const [isFetchingBalance, setIsFetchingBalance] = useState(false);
   // const [loading, setLoading] = useState(false);
-  const tokenAddress = "0xeaBc4b91d9375796AA4F69cC764A4aB509080A58";
-  const dappContractAddress = "0x682b1f3d1afa69ddfa5ff62c284894a19fd395b4";
-  const stateChangeContractAddress = "0xCeF6D6781f7db1BCDF18C6123A757a9a6398eA79";
-  const amount = "2000000000000000000";
+  const tokenAddress = "0x8ccF516a4f6fEC894f32F486d1426399bfc9B581";
+  const dappContractAddress = "0xa3597d4dc48b0B8fCB236Cb22D3a553813021D8A";
+  // const stateChangeContractAddress = "0xCeF6D6781f7db1BCDF18C6123A757a9a6398eA79";
+  const amount = "1000000000000000000";
 
   //   const activeChainId = ChainId.POLYGON_MUMBAI;
 
   // Types
-  type Balance = {
+  /*type Balance = {
     totalBalanceInUsd: number;
     alltokenBalances: any[];
-  };
+  };*/
 
 
   async function initWallet() {
     // init wallet
-    const socialLogin = new SocialLogin();
+    /*const socialLogin = new SocialLogin();
     await socialLogin.init(ethers.utils.hexValue(80001)); // Enter the network id in hex) parameter
     socialLogin.showConnectModal();
-
     setSocialLogin(socialLogin);
-    return socialLogin;
+    return socialLogin;*/
+    return { provider: window.ethereum}
   }
 
   async function login() {
     try {
 
-      let socialLogin = await initWallet();
+      let loginContext = await initWallet();
 
-      if (!socialLogin.provider) {
-        socialLogin.showWallet();
+      if (!loginContext.provider) {
+        // social login provider
+        // loginContext.showWallet();
       } else {
         setIsLogin(true);
         const provider = new ethers.providers.Web3Provider(
-          socialLogin.provider,
+          loginContext.provider,
         );
         const accounts = await provider.listAccounts();
-        console.log("EOA address", accounts);
+        console.log("EOA address", accounts[0]);
+        setEoaAddress(accounts[0])
 
 
-        let options = {
+        /*let options = {
           activeNetworkId: activeChainId,
           supportedNetworksIds: [activeChainId
           ],
@@ -81,19 +86,19 @@ function App() {
               // if need to override Rpc you can add providerUrl: 
             },
           ]
-        }
+        }*/
 
-        const walletProvider = new ethers.providers.Web3Provider(socialLogin.provider);
+        const walletProvider = new ethers.providers.Web3Provider(loginContext.provider);
 
-        let smartAccount = new SmartAccount(walletProvider, options);
-        smartAccount = await smartAccount.init();
+        // let smartAccount = new SmartAccount(walletProvider, options);
+        // smartAccount = await smartAccount.init();
 
 
-        let smartAccountInfo = await smartAccount.getSmartAccountState();
+        // let smartAccountInfo = await smartAccount.getSmartAccountState();
 
-        setSmartAccountAddress(smartAccountInfo?.address);
+        // setSmartAccountAddress(smartAccountInfo?.address);
 
-        const balanceParams = {
+        /*const balanceParams = {
           chainId: activeChainId,
           eoaAddress: smartAccount.address,
           tokenAddresses: [],
@@ -124,12 +129,12 @@ function App() {
 
         smartAccount.on('error', (response: any) => {
           console.log('error event received via emitter', response);
-        });
+        });*/
 
 
         const erc20Interface = new ethers.utils.Interface(erc20ABI);
-        const dappInterface = new ethers.utils.Interface(fundMeABI);
-        const stateChangeInterface = new ethers.utils.Interface(stateChangeABI);
+        const dappInterface = new ethers.utils.Interface(setPurposeAbi);
+        // const stateChangeInterface = new ethers.utils.Interface(stateChangeABI);
 
         const txs = [];
 
@@ -139,41 +144,57 @@ function App() {
 
         const tx1 = {
           to: tokenAddress,
-          data: data1
+          data: data1,
+          from: accounts[0]
         }
 
-        txs.push(tx1);
-        const data2 = dappInterface.encodeFunctionData(
-          'pullTokens', [tokenAddress, amount]
-        )
+        debugger;
+        console.log(tx1)
 
-
-        const tx2 = {
-          to: dappContractAddress,
-          data: data2
+        try{
+        let sentTx = await walletProvider.send("eth_sendTransaction", [tx1])
+        let receipt = await sentTx.wait(1);
+        console.log(receipt)
+        } catch (err) {
+          console.log("handle errors like signature denied here");
+          console.log(err);
         }
 
-        txs.push(tx2);
-
-        const data3 = stateChangeInterface.encodeFunctionData(
-          'setValue', ["Hey People, its me Divya"]
-        )
-
-
-        const tx3 = {
-          to: stateChangeContractAddress,
-          data: data3
-        }
-
-        txs.push(tx3);
+        // txs.push(tx1);
 
         debugger;
 
-        const response = await smartAccount.sendGaslessTransactionBatch({ transactions: txs })
+        // setPurpose("build simple dapp")
+        // console.log(purpose)
+        let purpose = "build simple dapp"
 
-        console.log(response);
+
+        const data2 = dappInterface.encodeFunctionData(
+          'setPurpose', [purpose, amount]
+        )
+
+        const tx2 = {
+          to: dappContractAddress,
+          data: data2,
+          from: accounts[0]
+        }
+
+        // txs.push(tx2);
+
+        try{
+          let sentTx = await walletProvider.send("eth_sendTransaction", [tx2])
+          let receipt = await sentTx.wait(1);
+          console.log(receipt)
+          } catch (err) {
+            console.log("handle errors like signature denied here");
+            console.log(err);
+          }
+
+        // const response = await smartAccount.sendGaslessTransactionBatch({ transactions: txs })
+
+        // console.log(response);
       }
-      console.log("Social login is not defined");
+      // console.log("Social login is not defined");
 
 
     } catch (error) {
@@ -201,10 +222,7 @@ function App() {
           </div>
           <div className='column meta-info-container'>
             <div className='row address-container'>
-              Smart Account: {smartAccountAddress}
-            </div>
-            <div className='row address-container'>
-              Smart Account Balance in USD: {balance.totalBalanceInUsd}
+              Connected Wallet: {eoaAddress}
             </div>
           </div>
         </div>
