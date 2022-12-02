@@ -12,6 +12,7 @@ import { Web3Provider } from '@ethersproject/providers'
 function App() {
   const [isLogin, setIsLogin] = useState(false);
 
+  // const [account, setAccount] = useState("");
   // const [socialLogin, setSocialLogin] = useState<SocialLogin | null>();
   // const [smartAccount, setSmartAccount] = useState<SmartAccount>();
   // const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>();
@@ -55,7 +56,11 @@ function App() {
 
   async function login() {
     try {
-    let loginContext = await initWallet();
+      let loginContext;
+    //let loginContext = socialLogin
+    if(!loginContext) {
+      loginContext = await initWallet()
+    }
 
     if (!loginContext.provider) {
       console.log('provider not found')
@@ -76,8 +81,52 @@ function App() {
   }
   }
 
+  // after social login -> set provider info
+  /*useEffect(() => {
+    if (window.location.hash) login();
+  }, [login]);*/
+
   async function logout() {
   }
+
+  /*async function logout() {
+
+    if (socialLogin) {
+      await socialLogin.logout();
+      socialLogin.hideWallet();
+      setIsLogin(false);
+      setAccount("");
+      setSmartAccount(undefined);
+      setBalance({
+        totalBalanceInUsd: 0,
+        alltokenBalances: [],
+      });
+      setSocialLogin(null);
+    }
+  }*/
+
+  // after login -> get provider event
+  /*useEffect(() => {
+    const interval = setInterval(async () => {
+      if (account) {
+        clearInterval(interval);
+      }
+      if (socialLogin?.provider && !account) {
+        login();
+      }
+    }, 1000);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [account, socialLogin, login]);
+
+  // if wallet already connected close widget
+  useEffect(() => {
+    console.log("hidelwallet");
+    if (socialLogin && socialLogin.provider) {
+      socialLogin.hideWallet();
+    }
+  }, [account, socialLogin]);*/
 
   const onApproveTokens = async () => {
     const erc20Interface = new ethers.utils.Interface(erc20ABI);
@@ -146,6 +195,14 @@ function App() {
       {!isLogin &&
         <button onClick={login}>Login</button>
       }
+
+    {/* {account && (
+         <div className="column meta-info-container">
+           <div className="row address-container">
+             EOA: {account}
+           </div>
+         </div>
+       )} */}
 
       {isLogin &&
         <div className='parent-container'>
