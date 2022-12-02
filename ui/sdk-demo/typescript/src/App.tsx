@@ -9,11 +9,6 @@ import { activeChainId } from './utils/chainConfig';
 import { isExpressionWithTypeArguments } from 'typescript';
 import { Web3Provider } from '@ethersproject/providers'
 
-/*type Balance = {
-  symbol: string,
-  amount: string
-}*/
-
 function App() {
   const [isLogin, setIsLogin] = useState(false);
 
@@ -53,11 +48,6 @@ function App() {
 
   async function initWallet() {
     // init wallet
-    /*const socialLogin = new SocialLogin();
-    await socialLogin.init(ethers.utils.hexValue(80001)); // Enter the network id in hex) parameter
-    socialLogin.showConnectModal();
-    setSocialLogin(socialLogin);
-    return socialLogin;*/
     const provider = window["ethereum"];
     await provider.enable();
     return { provider: provider }
@@ -68,8 +58,7 @@ function App() {
     let loginContext = await initWallet();
 
     if (!loginContext.provider) {
-      // social login provider
-      // loginContext.showWallet();
+      console.log('provider not found')
     } else {
       setIsLogin(true);
       const provider = new ethers.providers.Web3Provider(
@@ -179,7 +168,7 @@ function App() {
             </Button>
             <input
               type="text"
-              placeholder="Enter your quote"
+              placeholder="Enter your purpose"
               onChange={onQuoteChange}
               value={newQuote}
             />
