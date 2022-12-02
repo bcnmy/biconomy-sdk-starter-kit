@@ -8,7 +8,6 @@ import Button from "@material-ui/core/Button";
 import SocialLogin from "@biconomy/web3-auth";
 import erc20ABI from './abis/erc20.abi.json';
 import setPurposeAbi from './abis/setPurpose.abi.json';
-import stateChangeABI from './abis/statechange.abi.json';
 import SmartAccount from "@biconomy/smart-account";
 import { toFixed } from './utils';
 import { activeChainId } from './utils/chainConfig';
@@ -34,7 +33,6 @@ function App() {
   // const [loading, setLoading] = useState(false);
   const tokenAddress = "0x8ccF516a4f6fEC894f32F486d1426399bfc9B581";
   const dappContractAddress = "0xa3597d4dc48b0B8fCB236Cb22D3a553813021D8A";
-  const stateChangeContractAddress = "0xCeF6D6781f7db1BCDF18C6123A757a9a6398eA79";
   const amount = "2000000000000000000";
 
   //   const activeChainId = ChainId.POLYGON_MUMBAI;
