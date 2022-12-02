@@ -7,7 +7,7 @@ const root = createRoot(element!);
 
 const Index = () => {
   return (
-        <App />
+    <App />
   );
 };
 
