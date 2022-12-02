@@ -12,14 +12,10 @@ import SmartAccount from "@biconomy/smart-account";
 import { toFixed } from './utils';
 import { activeChainId } from './utils/chainConfig';
 
-type Balance = {
-  symbol: string,
-  amount: string
-}
-
 function App() {
   const [isLogin, setIsLogin] = useState(false);
   const [socialLogin, setSocialLogin] = useState<SocialLogin | null>();
+  const [account, setAccount] = useState("");
   const [smartAccount, setSmartAccount] = useState<SmartAccount>();
   // let smartAccount: SmartAccount;
   const [newQuote, setNewQuote] = useState("");
@@ -53,86 +49,117 @@ function App() {
     const socialLogin = new SocialLogin();
     await socialLogin.init(ethers.utils.hexValue(80001)); // Enter the network id in hex) parameter
     socialLogin.showConnectModal();
-
     setSocialLogin(socialLogin);
     return socialLogin;
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   async function login() {
-      // social login here
-      let loginContext = await initWallet();
+    // social login here
+    let loginContext = socialLogin
+    if(!loginContext) {
+      loginContext = await initWallet()
+    }
 
-      if (!loginContext.provider) {
-        loginContext.showWallet();
-      } else {
-        setIsLogin(true);
-        const provider = new ethers.providers.Web3Provider(
-          loginContext.provider,
-        );
-        const accounts = await provider.listAccounts();
-        console.log("EOA address", accounts);
+    if (!loginContext.provider) {
+      loginContext.showWallet();
+    } else {
+      setIsLogin(true);
+      const provider = new ethers.providers.Web3Provider(loginContext.provider);
+      const accounts = await provider.listAccounts();
+      setAccount(accounts[0])
+      console.log("EOA address", accounts);
 
+      let options = {
+        activeNetworkId: activeChainId,
+        supportedNetworksIds: [activeChainId],
+        networkConfig: [
+          {
+            chainId: ChainId.POLYGON_MUMBAI,
+            // Optional dappAPIKey (only required if you're using Gasless)
+            dappAPIKey: "59fRCMXvk.8a1652f0-b522-4ea7-b296-98628499aee3",
+            // if need to override Rpc you can add providerUrl:
+          },
+        ],
+      };
 
-        let options = {
-          activeNetworkId: activeChainId,
-          supportedNetworksIds: [activeChainId
-          ],
-          networkConfig: [
-            {
-              chainId: ChainId.POLYGON_MUMBAI,
-              // Optional dappAPIKey (only required if you're using Gasless)
-              dappAPIKey: '59fRCMXvk.8a1652f0-b522-4ea7-b296-98628499aee3',
-              // if need to override Rpc you can add providerUrl: 
-            },
-          ]
-        }
+      const walletProvider = new ethers.providers.Web3Provider(
+        loginContext.provider
+      );
 
-        const walletProvider = new ethers.providers.Web3Provider(loginContext.provider);
+      let smartAccount = new SmartAccount(walletProvider, options);
+      smartAccount = await smartAccount.init();
+      setSmartAccount(smartAccount);
 
-        let smartAccount = new SmartAccount(walletProvider, options);
-        smartAccount = await smartAccount.init();
-        setSmartAccount(smartAccount)
+      let smartAccountInfo = await smartAccount.getSmartAccountState();
 
+      setSmartAccountAddress(smartAccountInfo?.address);
 
-        let smartAccountInfo = await smartAccount.getSmartAccountState();
+      const balanceParams = {
+        chainId: activeChainId,
+        eoaAddress: smartAccount.address,
+        tokenAddresses: [],
+      };
+      const balFromSdk = await smartAccount.getAlltokenBalances(balanceParams);
 
-        setSmartAccountAddress(smartAccountInfo?.address);
+      const usdBalFromSdk = await smartAccount.getTotalBalanceInUsd(
+        balanceParams
+      );
+      console.info("getTotalBalanceInUsd", usdBalFromSdk);
+      setBalance({
+        totalBalanceInUsd: usdBalFromSdk.data.totalBalance,
+        alltokenBalances: balFromSdk.data,
+      });
 
-        const balanceParams = {
-          chainId: activeChainId,
-          eoaAddress: smartAccount.address,
-          tokenAddresses: [],
-        };
-        const balFromSdk = await smartAccount.getAlltokenBalances(balanceParams);
+      console.log(balance.totalBalanceInUsd);
+      console.log(balance.alltokenBalances);
 
-        const usdBalFromSdk = await smartAccount.getTotalBalanceInUsd(balanceParams);
-        console.info("getTotalBalanceInUsd", usdBalFromSdk);
-        setBalance({
-          totalBalanceInUsd: usdBalFromSdk.data.totalBalance,
-          alltokenBalances: balFromSdk.data,
-        });
+      debugger;
 
-        console.log(balance.totalBalanceInUsd)
-        console.log(balance.alltokenBalances)
+      smartAccount.on("txHashGenerated", (response: any) => {
+        console.log("txHashGenerated event received via emitter", response);
+        // showSuccessMessage(`Transaction sent: ${response.hash}`);
+      });
 
-        debugger;
+      smartAccount.on("txMined", (response: any) => {
+        console.log("txMined event received via emitter", response);
+        // showSuccessMessage(`Transaction mined: ${response.hash}`);
+      });
 
-        smartAccount.on('txHashGenerated', (response: any) => {
-          console.log('txHashGenerated event received via emitter', response);
-          // showSuccessMessage(`Transaction sent: ${response.hash}`);
-        });
-
-        smartAccount.on('txMined', (response: any) => {
-          console.log('txMined event received via emitter', response);
-          // showSuccessMessage(`Transaction mined: ${response.hash}`);
-        });
-
-        smartAccount.on('error', (response: any) => {
-          console.log('error event received via emitter', response);
-        });
-        //console.log("Social login is not defined");
+      smartAccount.on("error", (response: any) => {
+        console.log("error event received via emitter", response);
+      });
+      //console.log("Social login is not defined");
+    }
   }
-}
+
+  // after social login -> set provider info
+  useEffect(() => {
+    if (window.location.hash) login();
+  }, [login]);
+
+  // after login -> get provider event
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (account) {
+        clearInterval(interval);
+      }
+      if (socialLogin?.provider && !account) {
+        login();
+      }
+    }, 1000);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [account, socialLogin, login]);
+
+  // if wallet already connected close widget
+  useEffect(() => {
+    console.log("hidelwallet");
+    if (socialLogin && socialLogin.provider) {
+      socialLogin.hideWallet();
+    }
+  }, [account, socialLogin]);
 
   const onSubmit = async () => {
     if (newQuote != "") {
@@ -174,7 +201,18 @@ function App() {
 };
 
   async function logout() {
-
+    if (socialLogin) {
+      await socialLogin.logout();
+      socialLogin.hideWallet();
+      setIsLogin(false);
+      setAccount("");
+      setSmartAccount(undefined);
+      setBalance({
+        totalBalanceInUsd: 0,
+        alltokenBalances: [],
+      });
+      setSocialLogin(null);
+    }
   }
 
   return (
@@ -182,6 +220,14 @@ function App() {
       {!isLogin &&
         <button onClick={login}>Login</button>
       }
+
+      {account && (
+        <div className="column meta-info-container">
+          <div className="row address-container">
+            EOA: {account}
+          </div>
+        </div>
+      )}
 
       {isLogin &&
         <div className='parent-container'>
