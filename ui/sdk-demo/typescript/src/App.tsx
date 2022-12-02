@@ -4,9 +4,10 @@ import {
   ChainId
 } from "@biconomy/core-types";
 import { ethers } from "ethers";
+import Button from "@material-ui/core/Button";
 import SocialLogin from "@biconomy/web3-auth";
 import erc20ABI from './abis/erc20.abi.json';
-import fundMeABI from './abis/fundMe.abi.json';
+import setPurposeAbi from './abis/setPurpose.abi.json';
 import stateChangeABI from './abis/statechange.abi.json';
 import SmartAccount from "@biconomy/smart-account";
 import { toFixed } from './utils';
@@ -21,6 +22,8 @@ function App() {
   const [isLogin, setIsLogin] = useState(false);
   const [socialLogin, setSocialLogin] = useState<SocialLogin | null>();
   const [smartAccount, setSmartAccount] = useState<SmartAccount>();
+  // let smartAccount: SmartAccount;
+  const [newQuote, setNewQuote] = useState("");
   const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>();
   const [smartAccountBalances, setSmartAccountBalances] = useState<string | null>();
   const [balance, setBalance] = useState<Balance>({
@@ -29,8 +32,8 @@ function App() {
   });
   // const [isFetchingBalance, setIsFetchingBalance] = useState(false);
   // const [loading, setLoading] = useState(false);
-  const tokenAddress = "0xeaBc4b91d9375796AA4F69cC764A4aB509080A58";
-  const dappContractAddress = "0x682b1f3d1afa69ddfa5ff62c284894a19fd395b4";
+  const tokenAddress = "0x8ccF516a4f6fEC894f32F486d1426399bfc9B581";
+  const dappContractAddress = "0xa3597d4dc48b0B8fCB236Cb22D3a553813021D8A";
   const stateChangeContractAddress = "0xCeF6D6781f7db1BCDF18C6123A757a9a6398eA79";
   const amount = "2000000000000000000";
 
@@ -40,6 +43,10 @@ function App() {
   type Balance = {
     totalBalanceInUsd: number;
     alltokenBalances: any[];
+  };
+
+  const onQuoteChange = (event: { target: { value: React.SetStateAction<string>; }; }) => {
+    setNewQuote(event.target.value);
   };
 
 
@@ -54,16 +61,15 @@ function App() {
   }
 
   async function login() {
-    try {
+      // social login here
+      let loginContext = await initWallet();
 
-      let socialLogin = await initWallet();
-
-      if (!socialLogin.provider) {
-        socialLogin.showWallet();
+      if (!loginContext.provider) {
+        loginContext.showWallet();
       } else {
         setIsLogin(true);
         const provider = new ethers.providers.Web3Provider(
-          socialLogin.provider,
+          loginContext.provider,
         );
         const accounts = await provider.listAccounts();
         console.log("EOA address", accounts);
@@ -83,10 +89,11 @@ function App() {
           ]
         }
 
-        const walletProvider = new ethers.providers.Web3Provider(socialLogin.provider);
+        const walletProvider = new ethers.providers.Web3Provider(loginContext.provider);
 
         let smartAccount = new SmartAccount(walletProvider, options);
         smartAccount = await smartAccount.init();
+        setSmartAccount(smartAccount)
 
 
         let smartAccountInfo = await smartAccount.getSmartAccountState();
@@ -125,10 +132,14 @@ function App() {
         smartAccount.on('error', (response: any) => {
           console.log('error event received via emitter', response);
         });
+        //console.log("Social login is not defined");
+  }
+}
 
-
-        const erc20Interface = new ethers.utils.Interface(erc20ABI);
-        const dappInterface = new ethers.utils.Interface(fundMeABI);
+  const onSubmit = async () => {
+    if (newQuote != "") {
+      const erc20Interface = new ethers.utils.Interface(erc20ABI);
+        const dappInterface = new ethers.utils.Interface(setPurposeAbi);
         const stateChangeInterface = new ethers.utils.Interface(stateChangeABI);
 
         const txs = [];
@@ -143,8 +154,10 @@ function App() {
         }
 
         txs.push(tx1);
+
+
         const data2 = dappInterface.encodeFunctionData(
-          'pullTokens', [tokenAddress, amount]
+          'setPurpose', [newQuote, amount]
         )
 
 
@@ -155,31 +168,13 @@ function App() {
 
         txs.push(tx2);
 
-        const data3 = stateChangeInterface.encodeFunctionData(
-          'setValue', ["Hey People, its me Divya"]
-        )
-
-
-        const tx3 = {
-          to: stateChangeContractAddress,
-          data: data3
-        }
-
-        txs.push(tx3);
-
         debugger;
 
-        const response = await smartAccount.sendGaslessTransactionBatch({ transactions: txs })
+        const response = await smartAccount!.sendGaslessTransactionBatch({ transactions: txs })
 
         console.log(response);
       }
-      console.log("Social login is not defined");
-
-
-    } catch (error) {
-      console.log(error);
-    }
-  }
+};
 
   async function sendGaslessTransaction() {
   }
@@ -209,6 +204,22 @@ function App() {
           </div>
         </div>
       }
+
+      <section>
+        <div className="submit-container">
+          <div className="submit-row">
+            <input
+              type="text"
+              placeholder="Enter your quote"
+              onChange={onQuoteChange}
+              value={newQuote}
+            />
+            <Button variant="contained" color="primary" onClick={onSubmit}>
+              Approve and Set Purpose
+            </Button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
