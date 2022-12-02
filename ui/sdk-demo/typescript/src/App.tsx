@@ -140,7 +140,6 @@ function App() {
     if (newQuote != "") {
       const erc20Interface = new ethers.utils.Interface(erc20ABI);
         const dappInterface = new ethers.utils.Interface(setPurposeAbi);
-        const stateChangeInterface = new ethers.utils.Interface(stateChangeABI);
 
         const txs = [];
 
@@ -175,9 +174,6 @@ function App() {
         console.log(response);
       }
 };
-
-  async function sendGaslessTransaction() {
-  }
 
   async function logout() {
 
