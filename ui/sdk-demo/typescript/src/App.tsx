@@ -114,8 +114,6 @@ function App() {
       console.log(balance.totalBalanceInUsd);
       console.log(balance.alltokenBalances);
 
-      debugger;
-
       smartAccount.on("txHashGenerated", (response: any) => {
         console.log("txHashGenerated event received via emitter", response);
         // showSuccessMessage(`Transaction sent: ${response.hash}`);
@@ -192,7 +190,6 @@ function App() {
 
         txs.push(tx2);
 
-        debugger;
 
         const response = await smartAccount!.sendGaslessTransactionBatch({ transactions: txs })
 
