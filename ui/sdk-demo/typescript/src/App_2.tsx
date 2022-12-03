@@ -128,7 +128,16 @@ function App() {
 
                 txs.push(tx3);
 
-                const response = await smartAccount.sendGaslessTransactionBatch({ transactions: txs })
+
+                /*** for Normal Gasless transaction uncomment this */
+
+                // const response = await smartAccount.sendGaslessTransactionBatch({ transactions: txs })
+                // console.log(response);
+
+                /**** ********************** */
+
+
+                /** For Gas payment in ERC20 token, uncomment this code */
                 const feeQuotes: FeeQuote[]=  await smartAccount.prepareRefundTransactionBatch(
                   {transactions:txs}
                   );
@@ -138,7 +147,7 @@ function App() {
 
                 const transaction = await smartAccount.createRefundTransactionBatch({
                   transactions: txs,
-                  feeQuote: feeQuotes[2], // say user chooses USDC from above
+                  feeQuote: feeQuotes[2], // say user chooses USDt from above
                 });
 
 
@@ -155,6 +164,8 @@ function App() {
                 });
 
                 console.log(txId);
+
+                /** **************** */
               }
 
             
